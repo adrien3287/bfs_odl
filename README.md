@@ -30,7 +30,7 @@ Diese Home-Assistant-Custom-Integration liest aktuelle Gamma-Ortsdosisleistungsw
 ### Installation
 
 #### HACS (benutzerdefiniertes Repository)
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Q14siX&repository=bfs_odl)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Q14siX&repository=bfs_odl&category=integration)
 
 1. Dieses Projekt in ein öffentliches GitHub-Repository legen.
 2. In HACS als **Benutzerdefiniertes Repository** vom Typ **Integration** hinzufügen.
@@ -251,7 +251,7 @@ This Home Assistant custom integration reads current gamma ambient dose rate (OD
 ### Installation
 
 #### HACS (custom repository)
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Q14siX&repository=bfs_odl)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Q14siX&repository=bfs_odl&category=integration)
 
 1. Put this project into a public GitHub repository.
 2. In HACS, add it as a **Custom repository** of type **Integration**.
