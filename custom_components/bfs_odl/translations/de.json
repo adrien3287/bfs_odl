@@ -9,7 +9,8 @@
           "location_source": "Standortquelle",
           "search_radius_km": "Suchradius",
           "max_candidates": "Maximale Anzahl vorgeschlagener Messpunkte",
-          "scan_interval_minutes": "Aktualisierungsintervall"
+          "scan_interval_minutes": "Aktualisierungsintervall",
+          "area_id": "Bereich/Raum für alle Messstellen"
         }
       },
       "manual_location": {
@@ -53,7 +54,8 @@
           "location_source": "Standortquelle",
           "search_radius_km": "Suchradius",
           "max_candidates": "Maximale Anzahl vorgeschlagener Messpunkte",
-          "scan_interval_minutes": "Aktualisierungsintervall"
+          "scan_interval_minutes": "Aktualisierungsintervall",
+          "area_id": "Bereich/Raum für alle Messstellen"
         }
       },
       "manual_location": {
@@ -165,6 +167,9 @@
       },
       "measurement_end": {
         "name": "Messende"
+      },
+      "map_status": {
+        "name": "Kartenstatus"
       }
     }
   }

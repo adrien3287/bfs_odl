@@ -15,6 +15,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -25,6 +26,7 @@ from .const import (
     ATTR_KID_TEXT,
     ATTR_SITE_STATUS_TEXT,
     ATTR_VALIDATED_TEXT,
+    CONF_AREA_ID,
     CONF_SELECTED_STATIONS,
     CONF_STATION_DETAILS,
     DEFAULT_THRESHOLD_HIGH_USV_H,
@@ -76,6 +78,28 @@ def _kid_state(station: dict[str, Any]) -> str:
 
 def _uses_default_assessment_thresholds(low: float, high: float) -> bool:
     return abs(low - DEFAULT_THRESHOLD_LOW_USV_H) < 1e-9 and abs(high - DEFAULT_THRESHOLD_HIGH_USV_H) < 1e-9
+
+
+def _map_marker_state(station: dict[str, Any], low: float, high: float) -> str:
+    value = station.get("value")
+    if value is None:
+        return "⚪"
+    if value < low:
+        return "🟡"
+    if value > high:
+        return "🔴"
+    return "🟢"
+
+
+def _map_color(station: dict[str, Any], low: float, high: float) -> str:
+    value = station.get("value")
+    if value is None:
+        return "gray"
+    if value < low:
+        return "yellow"
+    if value > high:
+        return "red"
+    return "green"
 
 
 def _measurement_assessment_state(station: dict[str, Any], low: float, high: float) -> str:
@@ -217,6 +241,13 @@ SENSOR_DESCRIPTIONS: tuple[BfsOdlSensorDescription, ...] = (
         ],
     ),
     BfsOdlSensorDescription(
+        key="map_status",
+        translation_key="map_status",
+        icon="mdi:map-marker",
+        entity_registry_enabled_default=True,
+        value_fn=lambda station: station,
+    ),
+    BfsOdlSensorDescription(
         key="gamma_odl_1h_cosmic",
         translation_key="gamma_odl_1h_cosmic",
         icon="mdi:weather-night",
@@ -331,8 +362,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     coordinator: StrahlenschutzDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     merged = {**entry.data, **entry.options}
     station_details: dict[str, dict[str, Any]] = merged.get(CONF_STATION_DETAILS, {})
+    area_name = _selected_area_name(hass, merged.get(CONF_AREA_ID))
     entities = [
-        BfsOdlStationSensor(coordinator=coordinator, description=description, kenn=str(kenn), station_info=station_details.get(str(kenn), {}))
+        BfsOdlStationSensor(coordinator=coordinator, description=description, kenn=str(kenn), station_info=station_details.get(str(kenn), {}), area_name=area_name)
         for kenn in merged.get(CONF_SELECTED_STATIONS, [])
         for description in SENSOR_DESCRIPTIONS
     ]
@@ -343,11 +375,12 @@ class BfsOdlStationSensor(CoordinatorEntity[StrahlenschutzDataUpdateCoordinator]
     entity_description: BfsOdlSensorDescription
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: StrahlenschutzDataUpdateCoordinator, description: BfsOdlSensorDescription, kenn: str, station_info: dict[str, Any]) -> None:
+    def __init__(self, coordinator: StrahlenschutzDataUpdateCoordinator, description: BfsOdlSensorDescription, kenn: str, station_info: dict[str, Any], area_name: str | None) -> None:
         super().__init__(coordinator)
         self.entity_description = description
         self._kenn = kenn
         self._station_info = station_info
+        self._area_name = area_name
         self._attr_unique_id = f"{kenn}_{description.key}"
         if description.display_precision is not None:
             self._attr_suggested_display_precision = description.display_precision
@@ -366,6 +399,9 @@ class BfsOdlStationSensor(CoordinatorEntity[StrahlenschutzDataUpdateCoordinator]
         if self.entity_description.key == "measurement_assessment":
             low, high = self.coordinator.assessment_thresholds
             return _measurement_assessment_state(station, low, high)
+        if self.entity_description.key == "map_status":
+            low, high = self.coordinator.assessment_thresholds
+            return _map_marker_state(station, low, high)
         return self.entity_description.value_fn(station)
 
     @property
@@ -382,6 +418,7 @@ class BfsOdlStationSensor(CoordinatorEntity[StrahlenschutzDataUpdateCoordinator]
             model=MODEL,
             name=display_name,
             configuration_url="https://odlinfo.bfs.de/ODL/DE/service/datenschnittstelle/datenschnittstelle_node.html",
+            suggested_area=self._area_name,
         )
 
     @property
@@ -394,4 +431,27 @@ class BfsOdlStationSensor(CoordinatorEntity[StrahlenschutzDataUpdateCoordinator]
             return _primary_attributes(station, self._station_info, low, high)
         if self.entity_description.key == "measurement_assessment":
             return _assessment_attributes(station, low, high)
+        if self.entity_description.key == "map_status":
+            latitude = station.get("latitude") or self._station_info.get("latitude")
+            longitude = station.get("longitude") or self._station_info.get("longitude")
+            return {
+                "latitude": latitude,
+                "longitude": longitude,
+                "station_code": station.get("kenn") or self._kenn,
+                "station_id": station.get("station_id") or self._station_info.get("station_id"),
+                "station_name": station.get("name") or self._station_info.get("name"),
+                "odl_uSv_h": station.get("value"),
+                "map_color": _map_color(station, low, high),
+                "assessment_state": _measurement_assessment_state(station, low, high),
+                "threshold_low_uSv_h": low,
+                "threshold_high_uSv_h": high,
+                "distance_km": station.get("distance_km"),
+            }
         return None
+
+
+def _selected_area_name(hass: HomeAssistant, area_id: str | None) -> str | None:
+    if not area_id:
+        return None
+    area = ar.async_get(hass).async_get_area(area_id)
+    return area.name if area is not None else None
