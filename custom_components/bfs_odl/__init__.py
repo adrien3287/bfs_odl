@@ -11,7 +11,7 @@ from .api import StrahlenschutzApiClient
 from .const import DOMAIN
 from .coordinator import StrahlenschutzDataUpdateCoordinator
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.GEO_LOCATION]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
