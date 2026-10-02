@@ -9,7 +9,8 @@
           "location_source": "Location source",
           "search_radius_km": "Search radius",
           "max_candidates": "Maximum suggested measurement points",
-          "scan_interval_minutes": "Update interval"
+          "scan_interval_minutes": "Update interval",
+          "area_id": "Area for all measurement stations"
         }
       },
       "manual_location": {
@@ -53,7 +54,8 @@
           "location_source": "Location source",
           "search_radius_km": "Search radius",
           "max_candidates": "Maximum suggested measurement points",
-          "scan_interval_minutes": "Update interval"
+          "scan_interval_minutes": "Update interval",
+          "area_id": "Area for all measurement stations"
         }
       },
       "manual_location": {
@@ -165,6 +167,9 @@
       },
       "measurement_end": {
         "name": "Measurement end"
+      },
+      "map_status": {
+        "name": "Map status"
       }
     }
   }
