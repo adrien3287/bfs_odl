@@ -23,6 +23,8 @@ Diese Home-Assistant-Custom-Integration liest aktuelle Gamma-Ortsdosisleistungsw
 - Benutzerdefinierbare Schwellen für den Sensor **Messwertbewertung**
 - Standardschwellen `0,05 µSv/h` und `0,18 µSv/h`
 - Hauptsensor für den aktuellen 1-Stunden-Gamma-ODL-Wert
+- eigener **Kartenstatus**-Sensor pro Messstelle mit `latitude`/`longitude`; der Zustand ist ein farbiger Marker (🟢/🟡/🔴/⚪)
+- optionale Auswahl eines Home-Assistant-Bereichs/Raums bei der Einrichtung; alle erzeugten Messstellengeräte werden diesem Bereich vorgeschlagen
 - Zusätzliche Diagnose-Sensoren für kosmischen und terrestrischen Anteil, Entfernung, Höhe über NN, Prüfstatus, Messstellenstatus, Messnetzknoten, Messstations-ID, Stationscode sowie Messbeginn und Messende
 - Deutsche und englische Sprachdateien enthalten
 - Zeitstempel aus der API werden als UTC/Zulu behandelt; Home Assistant rechnet die Timestamp-Sensoren für die Anzeige in die Nutzerzeitzone um
@@ -451,3 +453,29 @@ The English reference-range blueprint shows readable English labels in the selec
 - Open the integration options and verify the configured lower and upper thresholds.
 - If thresholds match the defaults exactly, the sensor uses the natural-range wording.
 - If thresholds differ from the defaults, it uses the configured-range wording.
+
+
+## Anzeige auf einer Home-Assistant-Karte
+
+Für jede ausgewählte Messstelle wird eine aktivierte Entität **Kartenstatus** erzeugt. Sie besitzt numerische `latitude`- und `longitude`-Attribute.
+
+Der Zustand ist direkt als visueller Kartenmarker verwendbar:
+
+- 🟢 Wert innerhalb des konfigurierten Referenzbereichs
+- 🟡 Wert unterhalb des konfigurierten Referenzbereichs
+- 🔴 Wert oberhalb des konfigurierten Referenzbereichs
+- ⚪ keine aktuellen Daten
+
+Die Farben sind eine Visualisierung der in der Integration konfigurierten Schwellen und **kein amtlicher Strahlenschutz-Grenzwertalarm**.
+
+Beispiel:
+
+```yaml
+type: map
+auto_fit: true
+entities:
+  - entity: sensor.DEINE_MESSSTELLE_KARTENSTATUS
+    label_mode: state
+```
+
+Damit zeigt der native Home-Assistant-Kartenmarker direkt den farbigen Kreis als Zustand. Der Messwert selbst bleibt im Sensor **Gamma-ODL (1h)** verfügbar.
