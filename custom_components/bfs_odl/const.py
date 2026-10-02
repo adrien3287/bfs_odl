@@ -9,6 +9,7 @@ ATTR_KID_TEXT = "network_node"
 ATTR_SITE_STATUS_TEXT = "site_status"
 ATTR_VALIDATED_TEXT = "validation_status"
 
+CONF_AREA_ID = "area_id"
 CONF_LATITUDE = "latitude"
 CONF_LOCATION_SOURCE = "location_source"
 CONF_LONGITUDE = "longitude"
