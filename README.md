@@ -485,18 +485,20 @@ Damit zeigt der native Home-Assistant-Kartenmarker direkt den farbigen Kreis als
 
 Zusätzlich zu den Sensoren erzeugt die Integration pro ausgewählter Messstelle eine `geo_location.*`-Entität mit der gemeinsamen Quelle `bfs_odl`.
 
-Damit reicht in einer Home-Assistant-Karte eine einzige Quelle aus, um **alle ausgewählten BfS-ODL-Messstellen automatisch** anzuzeigen:
+Für die Karte reicht **eine einzige Quelle**. Es darf dabei kein `label_mode` gesetzt werden, damit Home Assistant das dynamische `entity_picture` als Marker verwendet:
 
 ```yaml
 type: map
 auto_fit: true
 cluster: false
 geo_location_sources:
-  - source: bfs_odl
-    label_mode: attribute
-    attribute: map_marker
+  - bfs_odl
 ```
 
-Das Attribut `map_marker` liefert 🟢/🟡/🔴/⚪ entsprechend der bereits in der Integration konfigurierten Bewertungsgrenzen. Zusätzlich stehen `odl_uSv_h`, `map_color`, Stationsdaten und Entfernung als Attribute zur Verfügung.
+Der Kartenmarker ist ein dynamisches SVG mit Strahlenschutzsymbol. Seine Farbe folgt der bereits in der Integration konfigurierten Messwertbewertung: grün innerhalb des Referenzbereichs, gelb darunter, rot darüber und grau bei fehlenden Daten.
+
+Die `geo_location.*`-Entität verwendet den **aktuellen Gamma-ODL-Wert in µSv/h selbst als Zustand**. Dadurch zeigt ein Klick auf den Kartenmarker im normalen Home-Assistant-Mehr-Info-Dialog direkt den aktuellen Messwert samt Verlauf/History an, statt nur die Entfernung zur Messstelle.
+
+Zusätzliche Attribute sind unter anderem `map_color`, Stationsdaten, Koordinaten, Entfernung, Schwellen sowie Messbeginn und Messende.
 
 Die Markerfarben visualisieren die konfigurierten Referenzschwellen und sind **kein amtlicher Strahlenschutz-Grenzwertalarm**. Neue Messstellen, die später über die Integrationsoptionen ausgewählt werden, erscheinen automatisch über dieselbe Quelle.

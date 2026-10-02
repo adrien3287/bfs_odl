@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
-from homeassistant.components.geo_location import GeolocationEvent
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfLength
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers.entity import DeviceInfo
@@ -53,13 +53,20 @@ async def async_setup_entry(
     )
 
 
-class BfsOdlGeolocationEntity(GeolocationEvent):
-    """Represent one BfS ODL measurement station on HA maps."""
+class BfsOdlGeolocationEntity(SensorEntity):
+    """Represent one BfS station as a map-ready ODL measurement entity.
+
+    The entity lives on the geo_location platform so all selected stations can
+    be added with one geo_location source. Its state is the current ODL value,
+    so the normal Home Assistant more-info dialog shows the measured radiation
+    value and its history instead of only the distance.
+    """
 
     _attr_should_poll = False
-    _attr_source = SOURCE
-    _attr_unit_of_measurement = UnitOfLength.KILOMETERS
     _attr_icon = "mdi:radioactive"
+    _attr_native_unit_of_measurement = "µSv/h"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 3
 
     def __init__(
         self,
@@ -75,14 +82,21 @@ class BfsOdlGeolocationEntity(GeolocationEvent):
 
         self._attr_unique_id = f"{kenn}_geo_location"
         self._attr_name = station_info.get("name") or f"BfS ODL {kenn}"
-        self._attr_latitude = _as_float(station_info.get("latitude"))
-        self._attr_longitude = _as_float(station_info.get("longitude"))
+        self._latitude = _as_float(station_info.get("latitude"))
+        self._longitude = _as_float(station_info.get("longitude"))
+        self._attr_entity_picture = _odl_marker_picture(None, None)
         self._sync_from_coordinator()
 
     @property
     def available(self) -> bool:
-        """A selected station remains locatable even if a measurement is missing."""
-        return self._attr_latitude is not None and self._attr_longitude is not None
+        """Keep the station on the map whenever its coordinates are known."""
+        return self._latitude is not None and self._longitude is not None
+
+    @property
+    def native_value(self) -> float | None:
+        """Return current ODL so more-info and history use the measurement."""
+        station = self._coordinator.data.get(self._kenn, {})
+        return _as_float(station.get("value"))
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -116,36 +130,77 @@ class BfsOdlGeolocationEntity(GeolocationEvent):
 
     def _sync_from_coordinator(self) -> None:
         station = self._coordinator.data.get(self._kenn, {})
-        self._attr_distance = _as_float(station.get("distance_km"))
-        self._attr_latitude = _as_float(
+        self._latitude = _as_float(
             station.get("latitude")
             if station.get("latitude") is not None
             else self._station_info.get("latitude")
         )
-        self._attr_longitude = _as_float(
+        self._longitude = _as_float(
             station.get("longitude")
             if station.get("longitude") is not None
             else self._station_info.get("longitude")
         )
+        low, high = self._coordinator.assessment_thresholds
+        self._attr_entity_picture = _odl_marker_picture(
+            _as_float(station.get("value")), (low, high)
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Expose attributes usable by map label_mode: attribute."""
+        """Expose map location and BfS station metadata."""
         station = self._coordinator.data.get(self._kenn, {})
         low, high = self._coordinator.assessment_thresholds
         value = _as_float(station.get("value"))
         marker, color = _map_marker(value, low, high)
         return {
+            "source": SOURCE,
+            "latitude": self._latitude,
+            "longitude": self._longitude,
             "map_marker": marker,
             "map_color": color,
             "odl_uSv_h": value,
             "station_code": station.get("kenn") or self._kenn,
             "station_id": station.get("station_id") or self._station_info.get("station_id"),
             "station_name": station.get("name") or self._station_info.get("name"),
+            "postal_code": station.get("plz") or self._station_info.get("plz"),
             "distance_km": station.get("distance_km"),
             "threshold_low_uSv_h": low,
             "threshold_high_uSv_h": high,
+            "measurement_start": station.get("start_measure"),
+            "measurement_end": station.get("end_measure"),
         }
+
+
+def _odl_marker_picture(
+    value: float | None,
+    thresholds: tuple[float, float] | None,
+) -> str:
+    """Return a compact radiation SVG marker using the configured thresholds."""
+    if value is None or thresholds is None:
+        background = "#616161"
+        foreground = "#FFFFFF"
+    else:
+        low, high = thresholds
+        if value < low:
+            background = "#FBC02D"
+            foreground = "#1F1F1F"
+        elif value > high:
+            background = "#C62828"
+            foreground = "#FFFFFF"
+        else:
+            background = "#2E7D32"
+            foreground = "#FFFFFF"
+
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" '
+        'viewBox="0 0 64 64">'
+        f'<circle cx="32" cy="32" r="29" fill="{background}" '
+        'stroke="#FFFFFF" stroke-width="4"/>'
+        f'<text x="32" y="43" text-anchor="middle" fill="{foreground}" '
+        'font-family="Arial,sans-serif" font-size="34" font-weight="700">'
+        "☢</text></svg>"
+    )
+    return f"data:image/svg+xml;charset=UTF-8,{quote(svg, safe='')}"
 
 
 def _map_marker(
